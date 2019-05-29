@@ -6,6 +6,8 @@ MAX_VELOCITY_MM_PER_MIN_X = 24000
 MAX_VELOCITY_MM_PER_MIN_Y = 12000
 MAX_VELOCITY_MM_PER_MIN_Z = 600
 MAX_VELOCITY_MM_PER_MIN_E = 1500
+MAX_VELOCITY_MM_PER_MIN_P = 1500
+
 MIN_VELOCITY_MM_PER_MIN = 1
 # Average velocity for endstop calibration procedure
 CALIBRATION_VELOCITY_MM_PER_MIN = 300
@@ -15,6 +17,8 @@ STEPPER_PULSES_PER_MM_X = 100
 STEPPER_PULSES_PER_MM_Y = 100
 STEPPER_PULSES_PER_MM_Z = 400
 STEPPER_PULSES_PER_MM_E = 150
+STEPPER_PULSES_PER_MM_P = 150
+
 
 # Invert axises direction, by default(False) high level means increase of
 # position. For inverted(True) axis, high level means decrease of position.
@@ -22,6 +26,8 @@ STEPPER_INVERTED_X = True
 STEPPER_INVERTED_Y = False
 STEPPER_INVERTED_Z = False
 STEPPER_INVERTED_E = True
+STEPPER_INVERTED_P = True
+
 
 # Invert zero end stops switches. By default(False) low level on input pin
 # means that axis in zero position. For inverted(True) end stops, high level
@@ -58,11 +64,13 @@ STEPPER_STEP_PIN_X = 21
 STEPPER_STEP_PIN_Y = 16
 STEPPER_STEP_PIN_Z = 12
 STEPPER_STEP_PIN_E = 8
+STEPPER_STEP_PIN_P = 8
 
 STEPPER_DIR_PIN_X = 20
 STEPPER_DIR_PIN_Y = 19
 STEPPER_DIR_PIN_Z = 13
 STEPPER_DIR_PIN_E = 7
+STEPPER_DIR_PIN_P = 7
 
 SPINDLE_PWM_PIN = 4
 FAN_PIN = 27

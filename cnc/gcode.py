@@ -53,17 +53,19 @@ class GCode(object):
         y = self.get('Y', default.y, multiply)
         z = self.get('Z', default.z, multiply)
         e = self.get('E', default.e, multiply)
-        return Coordinates(x, y, z, e)
+        p = self.get('P', default.p, multiply)
+
+        return Coordinates(x, y, z, e, p)
 
     def has_coordinates(self):
         """ Check if at least one of the coordinates is present.
         :return: Boolean value.
         """
         return 'X' in self.params or 'Y' in self.params or 'Z' in self.params \
-               or 'E' in self.params
+               or 'E' in self.params or 'P' in self.params
 
     def radius(self, default, multiply):
-        """ Get radius for circular interpolation(I, J, K or R).
+        """ Get radius for circular interpolation(I, J, K, R or P).
         :param default: Default values, if any of coords is not specified.
         :param multiply: If value exist, multiply it by this value.
         :return: Coord object.
@@ -71,7 +73,8 @@ class GCode(object):
         i = self.get('I', default.x, multiply)
         j = self.get('J', default.y, multiply)
         k = self.get('K', default.z, multiply)
-        return Coordinates(i, j, k, 0)
+        o = self.get('O', default.p, multiply)
+        return Coordinates(i, j, k, o,  0)
 
     def command(self):
         """ Get value from gcode line.

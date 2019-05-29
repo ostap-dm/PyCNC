@@ -42,6 +42,7 @@ class PulseGenerator(object):
         self._iteration_y = 0
         self._iteration_z = 0
         self._iteration_e = 0
+        self._iteration_p = 0
         self._iteration_direction = None
         self._acceleration_time_s = 0.0
         self._linear_time_s = 0.0
@@ -69,6 +70,9 @@ class PulseGenerator(object):
         if velocity_mm_sec.e * SECONDS_IN_MINUTE > MAX_VELOCITY_MM_PER_MIN_E:
             k = min(k, MAX_VELOCITY_MM_PER_MIN_E
                     / velocity_mm_sec.e / SECONDS_IN_MINUTE)
+        if velocity_mm_sec.p * SECONDS_IN_MINUTE > MAX_VELOCITY_MM_PER_MIN_P:
+            k = min(k, MAX_VELOCITY_MM_PER_MIN_P
+                    / velocity_mm_sec.p / SECONDS_IN_MINUTE)
         if k != 1.0:
             logging.warning("Out of speed, multiply velocity by {}".format(k))
         return velocity_mm_sec * k
@@ -89,7 +93,7 @@ class PulseGenerator(object):
         """
         raise NotImplemented
 
-    def _interpolation_function(self, ix, iy, iz, ie):
+    def _interpolation_function(self, ix, iy, iz, ie, ip):
         """ Get function for interpolation path. This function should returned
             values as it is uniform movement. There is only one trick, function
             must be expressed in terms of position, i.e. t = S / V for linear,
@@ -118,6 +122,7 @@ class PulseGenerator(object):
         self._iteration_y = 0
         self._iteration_z = 0
         self._iteration_e = 0
+        self._iteration_p = 0 
         self._iteration_direction = None
         logging.debug(', '.join("%s: %s" % i for i in vars(self).items()))
         return self
@@ -172,13 +177,14 @@ class PulseGenerator(object):
                  not be earlier in time then current. If there is no pulses
                  left StopIteration will be raised.
         """
-        direction, (tx, ty, tz, te) = \
+        direction, (tx, ty, tz, te, tp) = \
             self._interpolation_function(self._iteration_x, self._iteration_y,
-                                         self._iteration_z, self._iteration_e)
+                                         self._iteration_z, self._iteration_e, 
+                                         self._iteration_p)
         # check if direction update:
         if direction != self._iteration_direction:
             self._iteration_direction = direction
-            dir_x, dir_y, dir_z, dir_e = direction
+            dir_x, dir_y, dir_z, dir_e, dir_p = direction
             if STEPPER_INVERTED_X:
                 dir_x = -dir_x
             if STEPPER_INVERTED_Y:
@@ -187,14 +193,16 @@ class PulseGenerator(object):
                 dir_z = -dir_z
             if STEPPER_INVERTED_E:
                 dir_e = -dir_e
-            return True, dir_x, dir_y, dir_z, dir_e
+            if STEPPER_INVERTED_P:
+                dir_p = -dir_p
+            return True, dir_x, dir_y, dir_z, dir_e, dir_p
         # check condition to stop
-        if tx is None and ty is None and tz is None and te is None:
+        if tx is None and ty is None and tz is None and te is None and tp is None:
             raise StopIteration
 
         # convert to real time
         m = None
-        for i in (tx, ty, tz, te):
+        for i in (tx, ty, tz, te, tp):
             if i is not None and (m is None or i < m):
                 m = i
         am = self._to_accelerated_time(m)
@@ -223,8 +231,14 @@ class PulseGenerator(object):
             else:
                 te = am
                 self._iteration_e += 1
+        if tp is not None:
+            if tp > m:
+                tp = None
+            else:
+                tp = am
+                self._iteration_p += 1
 
-        return False, tx, ty, tz, te
+        return False, tx, ty, tz, te, tp
 
     def total_time_s(self):
         """ Get total time for movement.
@@ -285,10 +299,12 @@ class PulseGeneratorLinear(PulseGenerator):
         self._total_pulses_y = round(distance_mm.y * STEPPER_PULSES_PER_MM_Y)
         self._total_pulses_z = round(distance_mm.z * STEPPER_PULSES_PER_MM_Z)
         self._total_pulses_e = round(distance_mm.e * STEPPER_PULSES_PER_MM_E)
+        self._total_pulses_p = round(distance_mm.p * STEPPER_PULSES_PER_MM_P)
         self._direction = (math.copysign(1, delta_mm.x),
                            math.copysign(1, delta_mm.y),
                            math.copysign(1, delta_mm.z),
-                           math.copysign(1, delta_mm.e))
+                           math.copysign(1, delta_mm.e),
+                           math.copysign(1, delta_mm.p))
 
     def _get_movement_parameters(self):
         """ Return movement parameters, see super class for details.
@@ -319,7 +335,9 @@ class PulseGeneratorLinear(PulseGenerator):
                             self.max_velocity_mm_per_sec.z)
         t_e = self.__linear(ie, STEPPER_PULSES_PER_MM_E, self._total_pulses_e,
                             self.max_velocity_mm_per_sec.e)
-        return self._direction, (t_x, t_y, t_z, t_e)
+        t_p = self.__linear(ip, STEPPER_PULSES_PER_MM_P, self._total_pulses_p,
+                            self.max_velocity_mm_per_sec.p)
+        return self._direction, (t_x, t_y, t_z, t_e, t_p)
 
 
 class PulseGeneratorCircular(PulseGenerator):
@@ -557,6 +575,8 @@ class PulseGeneratorCircular(PulseGenerator):
                 self.max_velocity_mm_per_sec.z = v
             if self.max_velocity_mm_per_sec.e > 0.0:
                 self.max_velocity_mm_per_sec.e = v
+            if self.max_velocity_mm_per_sec.p > 0.0:
+                self.max_velocity_mm_per_sec.p = v
         else:
             linear_distance_mm = full_length - self.acceleration_time_s ** 2 \
                                  * STEPPER_MAX_ACCELERATION_MM_PER_S2
@@ -644,7 +664,7 @@ class PulseGeneratorCircular(PulseGenerator):
             return None
         return i / pulses_per_mm / velocity
 
-    def _interpolation_function(self, ix, iy, iz, ie):
+    def _interpolation_function(self, ix, iy, iz, ie, ip):
         """ Calculate interpolation values for linear movement, see super class
             for details.
         """
@@ -668,4 +688,6 @@ class PulseGeneratorCircular(PulseGenerator):
             dy = self._third_dir
         te = self.__linear(ie, self._iterations_e, STEPPER_PULSES_PER_MM_E,
                            self._e_velocity)
-        return (dx, dy, dz, self._e_dir), (tx, ty, tz, te)
+        tp = self.__linear(ip, self._iterations_p, STEPPER_PULSES_PER_MM_P,
+                           self._p_velocity)
+        return (dx, dy, dz, self._e_dir, self._p_dir), (tx, ty, tz, te, tp)

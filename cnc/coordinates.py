@@ -6,7 +6,7 @@ class Coordinates(object):
     """ This object represent machine coordinates.
         Machine supports 3 axis, so there are X, Y and Z.
     """
-    def __init__(self, x, y, z, e):
+    def __init__(self, x, y, z, e, p):
         """ Create object.
         :param x: x coordinated.
         :param y: y coordinated.
@@ -16,13 +16,15 @@ class Coordinates(object):
         self.y = round(y, 10)
         self.z = round(z, 10)
         self.e = round(e, 10)
+        self.p = round(p, 10)
+
 
     def is_zero(self):
         """ Check if all coordinates are zero.
         :return: boolean value.
         """
         return (self.x == 0.0 and self.y == 0.0 and self.z == 0.0
-                and self.e == 0.0)
+                and self.e == 0.0, self.p == 0.0)
 
     def is_in_aabb(self, p1, p2):
         """ Check coordinates are in aabb(Axis-Aligned Bounding Box).
@@ -45,9 +47,9 @@ class Coordinates(object):
         :return: Vector length.
         """
         return math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z
-                         + self.e * self.e)
+                         + self.e * self.e + self.p * self.p)
 
-    def round(self, base_x, base_y, base_z, base_e):
+    def round(self, base_x, base_y, base_z, base_e, base_p):
         """ Round values to specified base, ie 0.49 with base 0.25 will be 0.5.
         :param base_x: Base for x axis.
         :param base_y: Base for y axis.
@@ -58,48 +60,51 @@ class Coordinates(object):
         return Coordinates(round(self.x / base_x) * base_x,
                            round(self.y / base_y) * base_y,
                            round(self.z / base_z) * base_z,
-                           round(self.e / base_e) * base_e)
+                           round(self.e / base_e) * base_e,
+                           round(self.p / base_p) * base_p)
 
     def find_max(self):
         """ Find a maximum value of all values.
         :return: maximum value.
         """
-        return max(self.x, self.y, self.z, self.e)
+        return max(self.x, self.y, self.z, self.e, self.p)
 
     # build in function implementation
     def __add__(self, other):
         return Coordinates(self.x + other.x, self.y + other.y,
-                           self.z + other.z, self.e + other.e)
+                           self.z + other.z, self.e + other.e,
+                           self.p + other.p)
 
     def __sub__(self, other):
         return Coordinates(self.x - other.x, self.y - other.y,
-                           self.z - other.z, self.e - other.e)
+                           self.z - other.z, self.e - other.e,
+                           self.p - other.p)
 
     def __mul__(self, v):
         """
         @rtype: Coordinates
         """
-        return Coordinates(self.x * v, self.y * v, self.z * v, self.e * v)
+        return Coordinates(self.x * v, self.y * v, self.z * v, self.e * v, self.p * v)
 
     def __div__(self, v):
         """
         @rtype: Coordinates
         """
-        return Coordinates(self.x / v, self.y / v, self.z / v, self.e / v)
+        return Coordinates(self.x / v, self.y / v, self.z / v, self.e / v, self.p / v)
 
     def __truediv__(self, v):
         """
         @rtype: Coordinates
         """
-        return Coordinates(self.x / v, self.y / v, self.z / v, self.e / v)
+        return Coordinates(self.x / v, self.y / v, self.z / v, self.e / v, self.p / v)
 
     def __eq__(self, other):
         return self.x == other.x and self.y == other.y and self.z == other.z \
-               and self.e == other.e
+               and self.e == other.e and self.p == other.p
 
     def __str__(self):
         return '(' + str(self.x) + ', ' + str(self.y) + ', ' + str(self.z) \
-               + ', ' + str(self.e) + ')'
+               + ', ' + str(self.e) + ', ' + str(self.p) + ')'
 
     def __abs__(self):
-        return Coordinates(abs(self.x), abs(self.y), abs(self.z),  abs(self.e))
+        return Coordinates(abs(self.x), abs(self.y), abs(self.z),  abs(self.e), abs(self.p))

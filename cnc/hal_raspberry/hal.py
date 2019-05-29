@@ -16,6 +16,8 @@ STEP_PIN_MASK_X = 1 << STEPPER_STEP_PIN_X
 STEP_PIN_MASK_Y = 1 << STEPPER_STEP_PIN_Y
 STEP_PIN_MASK_Z = 1 << STEPPER_STEP_PIN_Z
 STEP_PIN_MASK_E = 1 << STEPPER_STEP_PIN_E
+STEP_PIN_MASK_P = 1 << STEPPER_STEP_PIN_P
+
 
 
 def init():
@@ -25,13 +27,19 @@ def init():
     gpio.init(STEPPER_STEP_PIN_Y, rpgpio.GPIO.MODE_OUTPUT)
     gpio.init(STEPPER_STEP_PIN_Z, rpgpio.GPIO.MODE_OUTPUT)
     gpio.init(STEPPER_STEP_PIN_E, rpgpio.GPIO.MODE_OUTPUT)
+    gpio.init(STEPPER_STEP_PIN_P, rpgpio.GPIO.MODE_OUTPUT)
+
     gpio.init(STEPPER_DIR_PIN_X, rpgpio.GPIO.MODE_OUTPUT)
     gpio.init(STEPPER_DIR_PIN_Y, rpgpio.GPIO.MODE_OUTPUT)
     gpio.init(STEPPER_DIR_PIN_Z, rpgpio.GPIO.MODE_OUTPUT)
     gpio.init(STEPPER_DIR_PIN_E, rpgpio.GPIO.MODE_OUTPUT)
+    gpio.init(STEPPER_DIR_PIN_P, rpgpio.GPIO.MODE_OUTPUT)
+
     gpio.init(ENDSTOP_PIN_X, rpgpio.GPIO.MODE_INPUT_PULLUP)
     gpio.init(ENDSTOP_PIN_Y, rpgpio.GPIO.MODE_INPUT_PULLUP)
     gpio.init(ENDSTOP_PIN_Z, rpgpio.GPIO.MODE_INPUT_PULLUP)
+
+
     gpio.init(SPINDLE_PWM_PIN, rpgpio.GPIO.MODE_OUTPUT)
     gpio.init(FAN_PIN, rpgpio.GPIO.MODE_OUTPUT)
     gpio.init(EXTRUDER_HEATER_PIN, rpgpio.GPIO.MODE_OUTPUT)
@@ -232,7 +240,7 @@ def move(generator):
     current_cb = 0
     k = 0
     k0 = 0
-    for direction, tx, ty, tz, te in generator:
+    for direction, tx, ty, tz, te, tp in generator:
         if current_cb is not None:
             while dma.current_address() + bytes_per_iter >= current_cb:
                 time.sleep(0.001)
@@ -260,11 +268,16 @@ def move(generator):
                 pins_to_clear |= 1 << STEPPER_DIR_PIN_E
             elif te < 0:
                 pins_to_set |= 1 << STEPPER_DIR_PIN_E
+            if tp > 0:
+                pins_to_clear |= 1 << STEPPER_DIR_PIN_P
+            elif tp < 0:
+                pins_to_set |= 1 << STEPPER_DIR_PIN_P
+                pass
             dma.add_set_clear(pins_to_set, pins_to_clear)
             continue
         pins = 0
         m = None
-        for i in (tx, ty, tz, te):
+        for i in (tx, ty, tz, te, tp):
             if i is not None and (m is None or i < m):
                 m = i
         k = int(round(m * US_IN_SECONDS))
@@ -276,6 +289,8 @@ def move(generator):
             pins |= STEP_PIN_MASK_Z
         if te is not None:
             pins |= STEP_PIN_MASK_E
+        if tp is not None:
+            pins |= STEP_PIN_MASK_P
         if k - prev > 0:
             dma.add_delay(k - prev)
         dma.add_pulse(pins, STEPPER_PULSE_LENGTH_US)

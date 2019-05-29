@@ -24,7 +24,7 @@ class GMachine(object):
     def __init__(self):
         """ Initialization.
         """
-        self._position = Coordinates(0.0, 0.0, 0.0, 0.0)
+        self._position = Coordinates(0.0, 0.0, 0.0, 0.0, 0.0)
         # init variables
         self._velocity = 0
         self._spindle_rpm = 0
@@ -53,9 +53,10 @@ class GMachine(object):
         self._velocity = min(MAX_VELOCITY_MM_PER_MIN_X,
                              MAX_VELOCITY_MM_PER_MIN_Y,
                              MAX_VELOCITY_MM_PER_MIN_Z,
-                             MAX_VELOCITY_MM_PER_MIN_E)
+                             MAX_VELOCITY_MM_PER_MIN_E,
+                             MAX_VELOCITY_MM_PER_MIN_P)
         self._spindle_rpm = 1000
-        self._local = Coordinates(0.0, 0.0, 0.0, 0.0)
+        self._local = Coordinates(0.0, 0.0, 0.0, 0.0, 0.0)
         self._convertCoordinates = 1.0
         self._absoluteCoordinates = True
         self._plane = PLANE_XY
@@ -98,7 +99,7 @@ class GMachine(object):
 
     def __check_delta(self, delta):
         pos = self._position + delta
-        if not pos.is_in_aabb(Coordinates(0.0, 0.0, 0.0, 0.0),
+        if not pos.is_in_aabb(Coordinates(0.0, 0.0, 0.0, 0.0, 0.0),
                               Coordinates(TABLE_SIZE_X_MM, TABLE_SIZE_Y_MM,
                                           TABLE_SIZE_Z_MM, 0)):
             raise GMachineException("out of effective area")
@@ -108,14 +109,16 @@ class GMachine(object):
         if max_velocity.x > MAX_VELOCITY_MM_PER_MIN_X \
                 or max_velocity.y > MAX_VELOCITY_MM_PER_MIN_Y \
                 or max_velocity.z > MAX_VELOCITY_MM_PER_MIN_Z \
-                or max_velocity.e > MAX_VELOCITY_MM_PER_MIN_E:
+                or max_velocity.e > MAX_VELOCITY_MM_PER_MIN_E \
+                or max_velocity.e > MAX_VELOCITY_MM_PER_MIN_P:
             raise GMachineException("out of maximum speed")
 
     def _move_linear(self, delta, velocity):
         delta = delta.round(1.0 / STEPPER_PULSES_PER_MM_X,
                             1.0 / STEPPER_PULSES_PER_MM_Y,
                             1.0 / STEPPER_PULSES_PER_MM_Z,
-                            1.0 / STEPPER_PULSES_PER_MM_E)
+                            1.0 / STEPPER_PULSES_PER_MM_E,
+                            1.0 / STEPPER_PULSES_PER_MM_P)
         if delta.is_zero():
             return
         self.__check_delta(delta)
@@ -189,14 +192,16 @@ class GMachine(object):
         delta = delta.round(1.0 / STEPPER_PULSES_PER_MM_X,
                             1.0 / STEPPER_PULSES_PER_MM_Y,
                             1.0 / STEPPER_PULSES_PER_MM_Z,
-                            1.0 / STEPPER_PULSES_PER_MM_E)
+                            1.0 / STEPPER_PULSES_PER_MM_E,
+                            1.0 / STEPPER_PULSES_PER_MM_P)
         radius = radius.round(1.0 / STEPPER_PULSES_PER_MM_X,
                               1.0 / STEPPER_PULSES_PER_MM_Y,
                               1.0 / STEPPER_PULSES_PER_MM_Z,
+                              1.0 / STEPPER_PULSES_PER_MM_E,
                               1.0 / STEPPER_PULSES_PER_MM_E)
         self.__check_delta(delta)
         # get delta vector and put it on circle
-        circle_end = Coordinates(0, 0, 0, 0)
+        circle_end = Coordinates(0, 0, 0, 0, 0)
         if self._plane == PLANE_XY:
             circle_end.x, circle_end.y = \
                 self.__adjust_circle(delta.x, delta.y, radius.x, radius.y,
@@ -222,7 +227,8 @@ class GMachine(object):
         circle_end = circle_end.round(1.0 / STEPPER_PULSES_PER_MM_X,
                                       1.0 / STEPPER_PULSES_PER_MM_Y,
                                       1.0 / STEPPER_PULSES_PER_MM_Z,
-                                      1.0 / STEPPER_PULSES_PER_MM_E)
+                                      1.0 / STEPPER_PULSES_PER_MM_E,
+                                      1.0 / STEPPER_PULSES_PER_MM_P)
         logging.info("Moving circularly {} {} {} with radius {}"
                      " and velocity {}".format(self._plane, circle_end,
                                                direction, radius, velocity))
@@ -249,9 +255,11 @@ class GMachine(object):
         :param x: boolean, move X axis to zero
         :param y: boolean, move Y axis to zero
         :param z: boolean, move Z axis to zero
+        :param e: boolean, move Z axis to zero
+        :param p: boolean, move Z axis to zero
         """
         if x and not y:
-            self._move_linear(Coordinates(-self._position.x, 0, 0, 0),
+            self._move_linear(Coordinates(-self._position.x, 0, 0, 0,),
                               MAX_VELOCITY_MM_PER_MIN_X)
         elif y and not x:
             self._move_linear(Coordinates(0, -self._position.y, 0, 0),
@@ -324,11 +332,11 @@ class GMachine(object):
             coord = coord + self._local
             delta = coord - self._position
         else:
-            delta = gcode.coordinates(Coordinates(0.0, 0.0, 0.0, 0.0),
+            delta = gcode.coordinates(Coordinates(0.0, 0.0, 0.0, 0.0, 0.0),
                                       self._convertCoordinates)
             # coord = self._position + delta
         velocity = gcode.get('F', self._velocity)
-        radius = gcode.radius(Coordinates(0.0, 0.0, 0.0, 0.0),
+        radius = gcode.radius(Coordinates(0.0, 0.0, 0.0, 0.0, 0.0),
                               self._convertCoordinates)
         # check parameters
         if velocity < MIN_VELOCITY_MM_PER_MIN:
@@ -338,7 +346,8 @@ class GMachine(object):
             vl = max(MAX_VELOCITY_MM_PER_MIN_X,
                      MAX_VELOCITY_MM_PER_MIN_Y,
                      MAX_VELOCITY_MM_PER_MIN_Z,
-                     MAX_VELOCITY_MM_PER_MIN_E)
+                     MAX_VELOCITY_MM_PER_MIN_E,
+                     MAX_VELOCITY_MM_PER_MIN_P)
             l = delta.length()
             if l > 0:
                 proportion = abs(delta) / l
@@ -358,6 +367,10 @@ class GMachine(object):
                     v = int(MAX_VELOCITY_MM_PER_MIN_E / proportion.e)
                     if v < vl:
                         vl = v
+                if proportion.p > 0:
+                    v = int(MAX_VELOCITY_MM_PER_MIN_P / proportion.p)
+                    if v < vl:
+                        vl = v
             self._move_linear(delta, vl)
         elif c == 'G1':  # linear interpolation
             self._move_linear(delta, velocity)
@@ -366,9 +379,9 @@ class GMachine(object):
         elif c == 'G3':  # circular interpolation, counterclockwise
             self._move_circular(delta, radius, velocity, CCW)
         elif c == 'G4':  # delay in s
-            if not gcode.has('P'):
-                raise GMachineException("P is not specified")
-            pause = gcode.get('P', 0)
+            if not gcode.has('C'):
+                raise GMachineException("C is not specified")
+            pause = gcode.get('C', 0)
             if pause < 0:
                 raise GMachineException("bad delay")
             hal.join()
@@ -384,15 +397,15 @@ class GMachine(object):
         elif c == 'G21':  # switch to mm
             self._convertCoordinates = 1.0
         elif c == 'G28':  # home
-            axises = gcode.has('X'), gcode.has('Y'), gcode.has('Z')
-            if axises == (False, False, False):
-                axises = True, True, True
+            axises = gcode.has('X'), gcode.has('Y'), gcode.has('Z'), gcode.has('E'), gcode.has('P')
+            if axises == (False, False, False, False, False):
+                axises = True, True, True, True, True
             self.safe_zero(*axises)
             hal.join()
             if not hal.calibrate(*axises):
                 raise GMachineException("failed to calibrate")
         elif c == 'G53':  # switch to machine coords
-            self._local = Coordinates(0.0, 0.0, 0.0, 0.0)
+            self._local = Coordinates(0.0, 0.0, 0.0, 0.0, 0.0)
         elif c == 'G90':  # switch to absolute coords
             self._absoluteCoordinates = True
         elif c == 'G91':  # switch to relative coords
@@ -403,7 +416,8 @@ class GMachine(object):
                     Coordinates(self._position.x - self._local.x,
                                 self._position.y - self._local.y,
                                 self._position.z - self._local.z,
-                                self._position.e - self._local.e),
+                                self._position.e - self._local.e,
+                                self._position.e - self._local.p),
                     self._convertCoordinates)
             else:
                 self._local = self._position
@@ -460,7 +474,7 @@ class GMachine(object):
         elif c == 'M114':  # get current position
             hal.join()
             p = self.position()
-            answer = "X:{} Y:{} Z:{} E:{}".format(p.x, p.y, p.z, p.e)
+            answer = "X:{} Y:{} Z:{} E:{} P:{}".format(p.x, p.y, p.z, p.e, p.p)
         elif c is None:  # command not specified(ie just F was passed)
             pass
         # commands below are added just for compatibility
