@@ -101,7 +101,8 @@ class GMachine(object):
         pos = self._position + delta
         if not pos.is_in_aabb(Coordinates(0.0, 0.0, 0.0, 0.0, 0.0),
                               Coordinates(TABLE_SIZE_X_MM, TABLE_SIZE_Y_MM,
-                                          TABLE_SIZE_Z_MM, 0)):
+                                          TABLE_SIZE_Z_MM, TABLE_SIZE_E_MM,
+                                          TABLE_SIZE_P_MM)):
             raise GMachineException("out of effective area")
 
     # noinspection PyMethodMayBeStatic
@@ -110,7 +111,7 @@ class GMachine(object):
                 or max_velocity.y > MAX_VELOCITY_MM_PER_MIN_Y \
                 or max_velocity.z > MAX_VELOCITY_MM_PER_MIN_Z \
                 or max_velocity.e > MAX_VELOCITY_MM_PER_MIN_E \
-                or max_velocity.e > MAX_VELOCITY_MM_PER_MIN_P:
+                or max_velocity.p > MAX_VELOCITY_MM_PER_MIN_P:
             raise GMachineException("out of maximum speed")
 
     def _move_linear(self, delta, velocity):
@@ -198,7 +199,7 @@ class GMachine(object):
                               1.0 / STEPPER_PULSES_PER_MM_Y,
                               1.0 / STEPPER_PULSES_PER_MM_Z,
                               1.0 / STEPPER_PULSES_PER_MM_E,
-                              1.0 / STEPPER_PULSES_PER_MM_E)
+                              1.0 / STEPPER_PULSES_PER_MM_P)
         self.__check_delta(delta)
         # get delta vector and put it on circle
         circle_end = Coordinates(0, 0, 0, 0, 0)
@@ -226,9 +227,7 @@ class GMachine(object):
         circle_end.e = delta.e
         circle_end = circle_end.round(1.0 / STEPPER_PULSES_PER_MM_X,
                                       1.0 / STEPPER_PULSES_PER_MM_Y,
-                                      1.0 / STEPPER_PULSES_PER_MM_Z,
-                                      1.0 / STEPPER_PULSES_PER_MM_E,
-                                      1.0 / STEPPER_PULSES_PER_MM_P)
+                                      1.0 / STEPPER_PULSES_PER_MM_Z)
         logging.info("Moving circularly {} {} {} with radius {}"
                      " and velocity {}".format(self._plane, circle_end,
                                                direction, radius, velocity))
@@ -397,9 +396,11 @@ class GMachine(object):
         elif c == 'G21':  # switch to mm
             self._convertCoordinates = 1.0
         elif c == 'G28':  # home
-            axises = gcode.has('X'), gcode.has('Y'), gcode.has('Z'), gcode.has('E'), gcode.has('P')
-            if axises == (False, False, False, False, False):
-                axises = True, True, True, True, True
+            axises = gcode.has('X'), gcode.has('Y'), gcode.has('Z')#, gcode.has('E'), gcode.has('P')
+            if axises == (False, False, False):
+                ''', False, False):'''
+                axises = True, True, True
+            ''' True, True'''
             self.safe_zero(*axises)
             hal.join()
             if not hal.calibrate(*axises):

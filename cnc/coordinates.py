@@ -36,9 +36,11 @@ class Coordinates(object):
         min_x, max_x = sorted((p1.x, p2.x))
         min_y, max_y = sorted((p1.y, p2.y))
         min_z, max_z = sorted((p1.z, p2.z))
-        if self.x < min_x or self.y < min_y or self.z < min_z:
+        min_e, max_e = sorted((p1.e, p2.e))
+        min_p, max_p = sorted((p1.p, p2.p))
+        if self.x < min_x or self.y < min_y or self.z < min_z or self.e < min_e or self.p < min_p:
             return False
-        if self.x > max_x or self.y > max_y or self.z > max_z:
+        if self.x > max_x or self.y > max_y or self.z > max_z or self.e > max_e or self.p > max_p:
             return False
         return True
 
@@ -46,8 +48,7 @@ class Coordinates(object):
         """ Calculate the length of vector.
         :return: Vector length.
         """
-        return math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z
-                         + self.e * self.e + self.p * self.p)
+        return math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z + self.e * self.e + self.p * self.p)
 
     def round(self, base_x, base_y, base_z, base_e, base_p):
         """ Round values to specified base, ie 0.49 with base 0.25 will be 0.5.
@@ -55,6 +56,7 @@ class Coordinates(object):
         :param base_y: Base for y axis.
         :param base_z: Base for z axis.
         :param base_e: Base for e axis.
+        :param base_p: Base for p axis.
         :return: New rounded object.
         """
         return Coordinates(round(self.x / base_x) * base_x,

@@ -30,9 +30,13 @@ class Plane(Enum):
     """
     pass
 
+
 PLANE_XY = Plane("XY")
 PLANE_ZX = Plane("ZX")
-PLANE_YZ = Plane("YZ")
+PLANE_EZ = Plane("EZ")
+PLANE_PE = Plane("PE")
+PLANE_YP = Plane("YP")
+
 
 
 class RotationDirection(Enum):

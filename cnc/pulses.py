@@ -323,7 +323,7 @@ class PulseGeneratorLinear(PulseGenerator):
         # Linear movement, S = V * t -> t = S / V
         return i / pulses_per_mm / velocity_mm_per_sec
 
-    def _interpolation_function(self, ix, iy, iz, ie):
+    def _interpolation_function(self, ix, iy, iz, ie, ip):
         """ Calculate interpolation values for linear movement, see super class
             for details.
         """

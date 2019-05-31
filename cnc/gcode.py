@@ -73,8 +73,9 @@ class GCode(object):
         i = self.get('I', default.x, multiply)
         j = self.get('J', default.y, multiply)
         k = self.get('K', default.z, multiply)
-        o = self.get('O', default.p, multiply)
-        return Coordinates(i, j, k, o,  0)
+        r = self.get('R', default.e, multiply)
+        p = self.get('P', default.p, multiply)
+        return Coordinates(i, j, k, r, p)
 
     def command(self):
         """ Get value from gcode line.
